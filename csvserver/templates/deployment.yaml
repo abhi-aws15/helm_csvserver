@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-csv
+  labels:
+    {{- include "csvserver.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "csvserver.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "csvserver.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ .Values.csvserver.repository }}:{{ .Values.csvserver.tag }}
+          imagePullPolicy: {{ .Values.csvserver.pullPolicy }}
+          env:
+          - name: {{ .Values.env_csv.name }}
+            value: "{{ .Values.env_csv.value }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.ports_csv.containerPort }}
+              protocol: TCP
+          volumeMounts:
+          - name: csv-vol
+            mountPath: /csvserver/inputdata
+            subPath: inputdata
+      volumes:
+      - name: csv-vol
+        configMap:
+          name: {{ .Release.Name }}-csv-cm
